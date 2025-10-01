@@ -4,6 +4,7 @@ This project demonstrates how to build a **feature-rich data table** in React us
 The table includes **global search, pagination, and Excel export** functionality.  
 
 ---
+## Live link (https://tanstack-table-search-pagination-ex.vercel.app/)
 
 ## ✨ Features  
 
