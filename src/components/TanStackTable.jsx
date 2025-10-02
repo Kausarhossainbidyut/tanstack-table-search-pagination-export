@@ -1,14 +1,72 @@
 // TanStackTable.jsx
-import { createColumnHelper, flexRender, useReactTable, getCoreRowModel, getPaginationRowModel, getFilteredRowModel } from '@tanstack/react-table';
+import { 
+  createColumnHelper, 
+  flexRender, 
+  useReactTable, 
+  getCoreRowModel, 
+  getPaginationRowModel, 
+  getFilteredRowModel 
+} from '@tanstack/react-table';
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import DownloadBtn from './DownloadBtn';
 import DebouncedInput from './DebouncedInput';
-import { User, Mail, Shield, Calendar, Hash, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { 
+  User, Mail, Shield, Calendar, Hash, Search, 
+  ChevronLeft, ChevronRight, Settings 
+} from "lucide-react";
 
 const TanStackTable = () => {
   const columnHelper = createColumnHelper();
 
+  // ===== State =====
+  const [data, setData] = useState([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  const [openMenu, setOpenMenu] = useState(null);
+
+  // ===== Load data from JSON =====
+  useEffect(() => {
+    axios.get("/user.json")
+      .then(res => setData(res.data))
+      .catch(err => console.error(err));
+  }, []);
+
+  // ===== Action Handlers =====
+  const handleToggleBan = (id) => {
+    setData(prevData =>
+      prevData.map(user =>
+        user.id === id
+          ? { ...user, status: user.status === "active" ? "banned" : "active" }
+          : user
+      )
+    );
+  };
+
+  const handleMakeModerator = (id) => {
+    setData(prevData =>
+      prevData.map(user =>
+        user.id === id ? { ...user, role: "Moderator" } : user
+      )
+    );
+  };
+
+  const handleMakeAdmin = (id) => {
+    setData(prevData =>
+      prevData.map(user =>
+        user.id === id ? { ...user, role: "Admin" } : user
+      )
+    );
+  };
+
+  const handleRemoveRole = (id) => {
+    setData(prevData =>
+      prevData.map(user =>
+        user.id === id ? { ...user, role: "User" } : user
+      )
+    );
+  };
+
+  // ===== Columns =====
   const columns = [
     columnHelper.accessor("id", {
       id: "S.No",
@@ -50,13 +108,7 @@ const TanStackTable = () => {
     }),
   ];
 
-  const [data, setData] = useState([]);
-  const [globalFilter, setGlobalFilter] = useState('');
-
-  useEffect(() => {
-    axios.get("/user.json").then(res => setData(res.data)).catch(err => console.error(err));
-  }, []);
-
+  // ===== React Table =====
   const table = useReactTable({
     data,
     columns,
@@ -68,8 +120,8 @@ const TanStackTable = () => {
 
   return (
     <div className='p-6 max-w-6xl mx-auto bg-gradient-to-br from-white via-indigo-50 to-indigo-100 shadow-lg rounded-2xl'>
-      
-      {/* Search + Download */}
+
+      {/* 🔍 Search + ⬇ Download */}
       <div className='flex flex-col md:flex-row justify-between mb-6 gap-3 items-center'>
         <div className="relative w-72">
           <Search size={18} className="absolute left-3 top-2.5 text-gray-400" />
@@ -83,7 +135,7 @@ const TanStackTable = () => {
         <DownloadBtn data={data} user={"user"} icon />
       </div>
 
-      {/* Table */}
+      {/* 📊 Table */}
       <div className='overflow-x-auto rounded-xl border border-gray-200 shadow-sm'>
         <table className='min-w-full border-collapse'>
           <thead className='bg-indigo-600 text-white'>
@@ -94,6 +146,7 @@ const TanStackTable = () => {
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
                 ))}
+                <th className="px-4 py-3 text-sm font-semibold text-left">Actions</th>
               </tr>
             ))}
           </thead>
@@ -105,26 +158,71 @@ const TanStackTable = () => {
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
+
+                {/* ⚙ Actions */}
+                <td className="py-3 px-4 relative">
+                  <button
+                    className="p-2 rounded-full hover:bg-gray-100 transition"
+                    onClick={() => setOpenMenu(openMenu === i ? null : i)}
+                  >
+                    <Settings className="w-5 h-5 text-gray-600" />
+                  </button>
+
+                  {openMenu === i && (
+                    <div className="absolute right-0 mt-2 w-40 bg-white border rounded-lg shadow-lg z-10">
+                      <button
+                        onClick={() => handleToggleBan(row.original.id)}
+                        className="block w-full px-4 py-2 text-sm hover:bg-gray-100"
+                      >
+                        {row.original.status === "active" ? "Ban" : "Unban"}
+                      </button>
+                      {row.original.role === "User" && (
+                        <button
+                          onClick={() => handleMakeModerator(row.original.id)}
+                          className="block w-full px-4 py-2 text-sm hover:bg-gray-100"
+                        >
+                          Make Moderator
+                        </button>
+                      )}
+                      {(row.original.role === "User" || row.original.role === "Moderator") && (
+                        <button
+                          onClick={() => handleMakeAdmin(row.original.id)}
+                          className="block w-full px-4 py-2 text-sm hover:bg-gray-100"
+                        >
+                          Make Admin
+                        </button>
+                      )}
+                      {(row.original.role === "Admin" || row.original.role === "Moderator") && (
+                        <button
+                          onClick={() => handleRemoveRole(row.original.id)}
+                          className="block w-full px-4 py-2 text-sm hover:bg-gray-100"
+                        >
+                          Remove Role
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Pagination */}
+      {/* 📑 Pagination */}
       <div className='flex flex-wrap items-center justify-between gap-4 mt-6'>
         <div className='flex items-center gap-2'>
           <button
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
             className='px-3 py-1.5 rounded-lg bg-indigo-500 text-white disabled:bg-gray-300 hover:bg-indigo-600 transition flex items-center gap-1'>
-            <ChevronLeft size={16}/> Prev
+            <ChevronLeft size={16} /> Prev
           </button>
           <button
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
             className='px-3 py-1.5 rounded-lg bg-indigo-500 text-white disabled:bg-gray-300 hover:bg-indigo-600 transition flex items-center gap-1'>
-            Next <ChevronRight size={16}/>
+            Next <ChevronRight size={16} />
           </button>
         </div>
 
